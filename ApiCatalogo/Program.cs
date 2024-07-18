@@ -21,6 +21,16 @@ var app = builder.Build();
 
 app.MapGet("/", () => "Catalogo de Produtos - 2024");
 
+//Listar todas as categorias
+app.MapGet("/categorias", async (AppDbContext db) => await db.Categorias.ToListAsync());
+
+//Retornar uma categoria pelo ID
+app.MapGet("/categorias/{id:int}", async (int id, AppDbContext db) =>
+{
+    return await db.Categorias.FindAsync(id) is CategoriaModel categoria ? Results.Ok(categoria) : Results.NotFound();
+});
+  
+//Criar uma nova categoria
 app.MapPost("/categorias", async (CategoriaModel categoria, AppDbContext db) =>
 {
     db.Categorias.Add(categoria);
