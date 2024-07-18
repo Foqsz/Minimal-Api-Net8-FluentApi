@@ -39,6 +39,26 @@ app.MapPost("/categorias", async (CategoriaModel categoria, AppDbContext db) =>
     return Results.Created($"/categorias/{categoria.CategoriaId}", categoria);
 });
 
+//Atualizar uma categoria
+app.MapPut("/categorias/{id:int}", async (int id, CategoriaModel categoria, AppDbContext db) =>
+{ 
+    if (categoria.CategoriaId != id)
+    {
+        return Results.BadRequest();
+    }
+
+    var categoriaDB = await db.Categorias.FindAsync(id);
+
+    if (categoriaDB is null) return Results.NotFound();
+
+    categoriaDB.Nome = categoria.Nome;
+    categoriaDB.Descricao = categoria.Descricao;
+     
+    await db.SaveChangesAsync();
+
+    return Results.Ok(categoriaDB);
+});
+
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
 {
