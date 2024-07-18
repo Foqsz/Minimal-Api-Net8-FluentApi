@@ -1,4 +1,6 @@
-﻿namespace ApiCatalogo.Models
+﻿using System.Text.Json.Serialization;
+
+namespace ApiCatalogo.Models
 {
     public class CategoriaModel
     {
@@ -6,6 +8,7 @@
         public string? Nome { get; set; }
         public string? Descricao { get; set; }
 
+        [JsonIgnore]
         public ICollection<ProdutoModel>? Produtos { get; set; }
     }
 }

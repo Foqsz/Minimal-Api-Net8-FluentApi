@@ -1,4 +1,5 @@
 using ApiCatalogo.Context;
+using ApiCatalogo.Models;
 using Microsoft.EntityFrameworkCore;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -17,6 +18,16 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 
 var app = builder.Build();
+
+app.MapGet("/", () => "Catalogo de Produtos - 2024");
+
+app.MapPost("/categorias", async (CategoriaModel categoria, AppDbContext db) =>
+{
+    db.Categorias.Add(categoria);
+    await db.SaveChangesAsync();
+
+    return Results.Created($"/categorias/{categoria.CategoriaId}", categoria);
+});
 
 // Configure the HTTP request pipeline.
 if (app.Environment.IsDevelopment())
