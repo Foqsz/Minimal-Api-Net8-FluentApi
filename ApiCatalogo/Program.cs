@@ -19,7 +19,7 @@ builder.Services.AddDbContext<AppDbContext>(options =>
 
 var app = builder.Build();
 
-app.MapGet("/", () => "Catalogo de Produtos - 2024");
+app.MapGet("/", () => "Catalogo de Produtos - 2024").ExcludeFromDescription();
 
 //Listar todas as categorias
 app.MapGet("/categorias", async (AppDbContext db) => await db.Categorias.ToListAsync());
@@ -57,6 +57,22 @@ app.MapPut("/categorias/{id:int}", async (int id, CategoriaModel categoria, AppD
     await db.SaveChangesAsync();
 
     return Results.Ok(categoriaDB);
+});
+
+//Deletar uma categoria
+app.MapDelete("/categorias/{id:int}", async (int id, AppDbContext db) =>
+{
+    var categoriaDelete = await db.Categorias.FindAsync(id);
+
+    if (categoriaDelete is null)
+    {
+        return Results.NotFound(); 
+    }
+    
+    db.Remove(categoriaDelete);
+    await db.SaveChangesAsync();
+
+    return Results.Ok(categoriaDelete);
 });
 
 // Configure the HTTP request pipeline.
