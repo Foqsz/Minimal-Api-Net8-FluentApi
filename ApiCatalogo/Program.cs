@@ -1,6 +1,11 @@
 using ApiCatalogo.Context;
 using ApiCatalogo.Models;
+using ApiCatalogo.Services;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -16,20 +21,64 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseMySql(connectionString, ServerVersion.AutoDetect(connectionString));
 });
 
+builder.Services.AddSingleton<ITokenService>(new TokenService());
+
+builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
+    .AddJwtBearer(options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateLifetime = true,
+            ValidateIssuerSigningKey = true,
+
+            ValidIssuer = builder.Configuration["Jwt:Issuer"],
+            ValidAudience = builder.Configuration["Jwt:Audience"],
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(builder.Configuration["Jwt:Key"]))
+        };
+    });
+
+builder.Services.AddAuthorization();
+
+
 
 var app = builder.Build();
+
+//endpoint login
+
+app.MapPost("/login", [AllowAnonymous] (UserModel userModel, ITokenService tokenService) =>
+{
+    if (userModel == null)
+    {
+        return Results.BadRequest("Login Invalido");
+    }
+
+    if (userModel.UserName == "Vinicius" && userModel.Password == "Foqs#123")
+    {
+        var tokenString = tokenService.GerarToken(app.Configuration["Jwt:Key"],
+        app.Configuration["Jwt:Issuer"],
+        app.Configuration["Jwt:Audience"], userModel);
+
+        return Results.Ok(new { token = tokenString });
+    }
+    else
+    {
+        return Results.BadRequest("Login invalido");
+    }
+}).Produces(StatusCodes.Status400BadRequest).Produces(StatusCodes.Status200OK).WithName("Login").WithTags("Autenticacao");
 
 app.MapGet("/", () => "Catalogo de Produtos - 2024").ExcludeFromDescription();
 
 //Listar todas as categorias
-app.MapGet("/categorias", async (AppDbContext db) => await db.Categorias.ToListAsync());
+app.MapGet("/categorias", async (AppDbContext db) => await db.Categorias.ToListAsync()).RequireAuthorization();
 
 //Retornar uma categoria pelo ID
 app.MapGet("/categorias/{id:int}", async (int id, AppDbContext db) =>
 {
     return await db.Categorias.FindAsync(id) is CategoriaModel categoria ? Results.Ok(categoria) : Results.NotFound();
 });
-  
+
 //Criar uma nova categoria
 app.MapPost("/categorias", async (CategoriaModel categoria, AppDbContext db) =>
 {
@@ -41,7 +90,7 @@ app.MapPost("/categorias", async (CategoriaModel categoria, AppDbContext db) =>
 
 //Atualizar uma categoria
 app.MapPut("/categorias/{id:int}", async (int id, CategoriaModel categoria, AppDbContext db) =>
-{ 
+{
     if (categoria.CategoriaId != id)
     {
         return Results.BadRequest();
@@ -53,7 +102,7 @@ app.MapPut("/categorias/{id:int}", async (int id, CategoriaModel categoria, AppD
 
     categoriaDB.Nome = categoria.Nome;
     categoriaDB.Descricao = categoria.Descricao;
-     
+
     await db.SaveChangesAsync();
 
     return Results.Ok(categoriaDB);
@@ -66,9 +115,9 @@ app.MapDelete("/categorias/{id:int}", async (int id, AppDbContext db) =>
 
     if (categoriaDelete is null)
     {
-        return Results.NotFound(); 
+        return Results.NotFound();
     }
-    
+
     db.Remove(categoriaDelete);
     await db.SaveChangesAsync();
 
@@ -80,7 +129,7 @@ app.MapDelete("/categorias/{id:int}", async (int id, AppDbContext db) =>
 
 
 //Listar todos os produtos
-app.MapGet("/produtos", async (AppDbContext db) => await db.Produtos.ToListAsync());
+app.MapGet("/produtos", async (AppDbContext db) => await db.Produtos.ToListAsync()).RequireAuthorization();
 
 //Listar um produto pelo ID
 app.MapGet("/produtos/{id:int}", async (int id, AppDbContext db) =>
@@ -94,7 +143,7 @@ app.MapPost("/produtos", async (ProdutoModel produto, AppDbContext db) =>
     db.Produtos.Add(produto);
     await db.SaveChangesAsync();
 
-    return Results.Created($"/produtos/{produto.ProdutoId}", produto); 
+    return Results.Created($"/produtos/{produto.ProdutoId}", produto);
 });
 
 //Atualizar um produto
@@ -141,7 +190,9 @@ if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
     app.UseSwaggerUI();
-} 
-  
+}
+
+app.UseAuthentication();
+app.UseAuthorization();
+
 app.Run();
- 
