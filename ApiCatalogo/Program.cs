@@ -1,16 +1,12 @@
 using ApiCatalogo.ApiEndPoints;
-using ApiCatalogo.Context;
-using ApiCatalogo.Models;
+using ApiCatalogo.AppServicesExtensions;
+using ApiCatalogo.Context; 
 using ApiCatalogo.Services;
-using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Authentication.JwtBearer; 
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
-using Microsoft.OpenApi.Models;
-using System.Diagnostics.Metrics;
-using System.Reflection.Metadata;
-using System.Text;
-using static System.Net.Mime.MediaTypeNames;
+using Microsoft.OpenApi.Models; 
+using System.Text; 
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -72,9 +68,7 @@ builder.Services.AddAuthentication(JwtBearerDefaults.AuthenticationScheme)
     });
 
 builder.Services.AddAuthorization();
-
-
-
+ 
 var app = builder.Build();
 
 app.MapAutenticacaoEndPoints();
@@ -83,17 +77,9 @@ app.MapCategoriasEndPoints();
 
 app.MapProdutosEndPoints();
 
-//------ENDPOINTS PRODUTOS-------//
+var environmet = app.Environment;
 
-
-
-
-// Configure the HTTP request pipeline.
-if (app.Environment.IsDevelopment())
-{
-    app.UseSwagger();
-    app.UseSwaggerUI();
-}
+app.UseExceptionHanling(environmet).UseSwaggerMiddleware();
 
 app.UseAuthentication();
 app.UseAuthorization();
